@@ -32,8 +32,8 @@ region_files <- c(
   "polygon_bcs_subarea_bcs.csv",     # 9
   "polygon_ca_subarea_sbs.csv"       # 10
 )
-#region_names <- c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS")
-region_names <- rev(c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS"))
+region_names <- c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS")
+#region_names <- rev(c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS"))
 
 
 # ---- Load scenario data ----
@@ -113,7 +113,7 @@ all_regions <- do.call(rbind, regions_data)
 
 # ---- Main map ----
 # Create sf objects for annotation
-anno_sf2 <- st_sf(label = "Annual SST Change for 2040-2059",
+anno_sf2 <- st_sf(label = "Annual SST Change\n SSP2-4.5 2040-2059\n Baseline Period 1990-2014",
                   geometry = st_sfc(
                     st_point(c(-105, 45))
                   ),
@@ -129,8 +129,10 @@ main_map <- basemap(
   geom_sf(data = all_regions, aes(fill = temp_change), color = "black", size = 0.2, alpha = 1) +
   scale_fill_gradientn(
     colors = thermal_colors,
-    limits = c(min(temp_bins), max(temp_bins)),
-    breaks = temp_bins,
+#    limits = c(min(temp_bins), max(temp_bins)),
+#    breaks = temp_bins,
+    limits = c(0.5, 4.5),
+    breaks = c(0.5, 1.5, 2.5, 3.5, 4.5),
     name = "SST\nChange (°C)",
     guide = guide_colorbar(barwidth=1, barheight=10, title.position="top")
   ) +
@@ -189,22 +191,26 @@ barplot_data <- df %>%
 
 bar_colors <- c("SSP1-2.6"="#CCCCCC", "SSP2-4.5"="#999999", "SSP3-7.0"="#666666", "SSP5-8.5"="#333333")
 
+# Reverse the order of regions for barplot
+barplot_data$region <- factor(barplot_data$region, levels = rev(levels(barplot_data$region)))
+
 bar_chart <- ggplot(barplot_data, aes(x = region, y = change, fill = scenario)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.7, color = "black") +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7, color = "black", linewidth = 0.1) +
   geom_errorbar(
     aes(ymin = change - std, ymax = change + std),
-    width = 0.15,
-    position = position_dodge(width = 0.8)
+    width = 0.3,
+    position = position_dodge(width = 0.8),
+    linewidth = 0.1
   ) +
   scale_fill_manual(values = bar_colors, name = "Scenario") +
   ylab("SST change (°C)") +
   xlab("") +
-  scale_y_continuous(expand = c(0,0), limits = c(0, 3.8)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 10)) +
   theme_minimal(base_size = 8) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-    axis.text.y = element_text(size = 6),
-    axis.title.y = element_text(size = 7),
+    axis.text.y = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
     legend.position = "right"
   )
 
@@ -218,3 +224,8 @@ combined_plot <- plot_grid(
 )
 print(combined_plot)
 # ggsave("SSP_map.png", combined_plot, width=12, height=10, dpi=300)
+# Uncomment to save the plot
+ggsave("Figure7pt10c.png", combined_plot,
+       width = 12, height = 10, dpi = 300)
+ggsave("Figure7pt10c.svg", combined_plot,width = 12,
+       height = 10, units = "in", device = "svg", scale = 0.5)
