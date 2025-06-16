@@ -14,6 +14,7 @@ suppressPackageStartupMessages({
   library(sf)
   library(cowplot)
   library(viridis)
+  library(RColorBrewer)
   library(R.matlab)
 })
 
@@ -31,22 +32,23 @@ region_files <- c(
   "polygon_bcs_subarea_bcs.csv",     # 9
   "polygon_ca_subarea_sbs.csv"       # 10
 )
-region_names <- c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS")
+#region_names <- c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS")
+region_names <- rev(c("GoM", "SS", "GSL", "SNS", "NNS", "LS", "HB", "BB", "BCS", "SBS"))
+
 
 # ---- Load scenario data ----
 mat_data <- readMat(file.path(DIR, "SSP_2040_2059_annual.mat"))
-get_var <- function(x) as.vector(mat_data[[x]])
-diff_mean_126 <- get_var("diff_mean_126")
-diff_mean_245 <- get_var("diff_mean_245")
-diff_mean_370 <- get_var("diff_mean_370")
-diff_mean_585 <- get_var("diff_mean_585")
-diff_std_126  <- get_var("diff_std_126")
-diff_std_245  <- get_var("diff_std_245")
-diff_std_370  <- get_var("diff_std_370")
-diff_std_585  <- get_var("diff_std_585")
+diff_mean_126 <- as.vector(mat_data$diff.mean.126)
+diff_mean_245 <- as.vector(mat_data$diff.mean.245)
+diff_mean_370 <- as.vector(mat_data$diff.mean.370)
+diff_mean_585 <- as.vector(mat_data$diff.mean.585)
+diff_std_126  <- as.vector(mat_data$diff.std.126)
+diff_std_245  <- as.vector(mat_data$diff.std.245)
+diff_std_370  <- as.vector(mat_data$diff.std.370)
+diff_std_585  <- as.vector(mat_data$diff.std.585)
 
 # ---- Color mapping ----
-temp_bins <- c(0.5, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0)
+temp_bins <- c(0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0)
 n_bins <- length(temp_bins)
 thermal_colors <- viridis(n_bins, option = "plasma")
 assign_color <- function(value, bins, colors) {
@@ -110,8 +112,15 @@ if (length(regions_data) == 0) stop("No valid polygons found!")
 all_regions <- do.call(rbind, regions_data)
 
 # ---- Main map ----
+# Create sf objects for annotation
+anno_sf2 <- st_sf(label = "Annual SST Change for 2040-2059",
+                  geometry = st_sfc(
+                    st_point(c(-105, 45))
+                  ),
+                  crs = 4326)
+
 main_map <- basemap(
-  limits = c(-150, -40, 40, 80),
+  limits = c(-140, -50, 40, 80),
   crs = 3978,
   land.col = "grey70",
   grid.col = "grey90",
@@ -122,18 +131,27 @@ main_map <- basemap(
     colors = thermal_colors,
     limits = c(min(temp_bins), max(temp_bins)),
     breaks = temp_bins,
-    name = "SST Change (°C)",
+    name = "SST\nChange (°C)",
     guide = guide_colorbar(barwidth=1, barheight=10, title.position="top")
   ) +
-  geom_text(
-    data = all_regions,
-    aes(x = xlon, y = ylat + 0.1, label = region_id),
-    size = 3, color = "white", fontface = "bold"
-  ) +
+#  geom_text(
+#    data = all_regions,
+#    aes(x = xlon, y = ylat + 0.1, label = region_id),
+#    size = 3, color = "white", fontface = "bold"
+#  ) +
+  geom_sf_text(data = all_regions,
+               aes(label = region_id),
+               size = 3,
+               color = "white",
+               fontface = "bold") +
+  # Add season labels
+  geom_sf_text(data = anno_sf2, aes(label = label), size = 3, fontface = "plain") +
   theme(
     legend.position = "right",
     legend.title = element_text(size=8),
-    legend.text = element_text(size=6)
+    legend.text = element_text(size=6),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
   )
 
 # ---- Barplot for all scenarios ----
